@@ -7,21 +7,20 @@ from inference.data.video_reader import VideoReader
 
 class LongTestDataset:
     def __init__(self, data_root, size=-1):
-        self.image_dir = path.join(data_root, 'JPEGImages')
-        self.mask_dir = path.join(data_root, 'Annotations')
+        self.image_dir = path.join(data_root, 'rgb')
+        self.mask_dir = path.join(data_root, 'masks')
         self.size = size
 
         self.vid_list = sorted(os.listdir(self.image_dir))
 
     def get_datasets(self):
-        for video in self.vid_list:
-            yield VideoReader(video, 
-                path.join(self.image_dir, video), 
-                path.join(self.mask_dir, video),
-                to_save = [
-                    name[:-4] for name in os.listdir(path.join(self.mask_dir, video))
-                ],
-                size=self.size,
+        # for video in self.vid_list:
+        yield VideoReader(path.join(self.image_dir), 
+            path.join(self.mask_dir),
+            to_save = [
+                name[:-4] for name in os.listdir(path.join(self.mask_dir))
+            ],
+            size=self.size,
             )
 
     def __len__(self):

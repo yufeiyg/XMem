@@ -143,13 +143,13 @@ else:
 
 total_process_time = 0
 total_frames = 0
-
 # Start eval
 for vid_reader in progressbar(meta_loader, max_value=len(meta_dataset), redirect_stdout=True):
 
     loader = DataLoader(vid_reader, batch_size=1, shuffle=False, num_workers=2)
-    vid_name = vid_reader.vid_name
+    # vid_name = vid_reader.vid_name
     vid_length = len(loader)
+    print(vid_length)
     # no need to count usage for LT if the video is not that long anyway
     config['enable_long_term_count_usage'] = (
         config['enable_long_term'] and
@@ -162,10 +162,11 @@ for vid_reader in progressbar(meta_loader, max_value=len(meta_dataset), redirect
     mapper = MaskMapper()
     processor = InferenceCore(network, config=config)
     first_mask_loaded = False
-
     for ti, data in enumerate(loader):
         with torch.cuda.amp.autocast(enabled=not args.benchmark):
             rgb = data['rgb'].cuda()[0]
+            
+            # print(f'Processing {vid_name} frame {data["info"]["frame"][0][:-4]}')
             msk = data.get('mask')
             info = data['info']
             frame = info['frame'][0]
@@ -180,14 +181,15 @@ for vid_reader in progressbar(meta_loader, max_value=len(meta_dataset), redirect
             start = torch.cuda.Event(enable_timing=True)
             end = torch.cuda.Event(enable_timing=True)
             start.record()
-
             if not first_mask_loaded:
                 if msk is not None:
+                    print("mask is not None")
                     first_mask_loaded = True
                 else:
                     # no point to do anything without a mask
+                    # print("mask is None, skipping this frame")
                     continue
-
+            # print("after first mask loaded")
             if args.flip:
                 rgb = torch.flip(rgb, dims=[-1])
                 msk = torch.flip(msk, dims=[-1]) if msk is not None else None
@@ -225,17 +227,20 @@ for vid_reader in progressbar(meta_loader, max_value=len(meta_dataset), redirect
                 prob = (prob.detach().cpu().numpy()*255).astype(np.uint8)
 
             # Save the mask
+            print(args.save_all)
             if args.save_all or info['save'][0]:
-                this_out_path = path.join(out_path, vid_name)
+                print("saving the mask")
+                this_out_path = path.join(out_path)
                 os.makedirs(this_out_path, exist_ok=True)
                 out_mask = mapper.remap_index_mask(out_mask)
                 out_img = Image.fromarray(out_mask)
+                print(this_out_path, frame[:-4]+'.png')
                 if vid_reader.get_palette() is not None:
                     out_img.putpalette(vid_reader.get_palette())
                 out_img.save(os.path.join(this_out_path, frame[:-4]+'.png'))
 
             if args.save_scores:
-                np_path = path.join(args.output, 'Scores', vid_name)
+                np_path = path.join(args.output, 'Scores')
                 os.makedirs(np_path, exist_ok=True)
                 if ti==len(loader)-1:
                     hkl.dump(mapper.remappings, path.join(np_path, f'backward.hkl'), mode='w')

@@ -194,7 +194,6 @@ class UpsampleBlock(nn.Module):
 class KeyProjection(nn.Module):
     def __init__(self, in_dim, keydim):
         super().__init__()
-
         self.key_proj = nn.Conv2d(in_dim, keydim, kernel_size=3, padding=1)
         # shrinkage
         self.d_proj = nn.Conv2d(in_dim, 1, kernel_size=3, padding=1)
@@ -207,7 +206,6 @@ class KeyProjection(nn.Module):
     def forward(self, x, need_s, need_e):
         shrinkage = self.d_proj(x)**2 + 1 if (need_s) else None
         selection = torch.sigmoid(self.e_proj(x)) if (need_e) else None
-
         return self.key_proj(x), shrinkage, selection
 
 

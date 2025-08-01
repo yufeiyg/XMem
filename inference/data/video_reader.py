@@ -15,7 +15,7 @@ class VideoReader(Dataset):
     """
     This class is used to read a video, one frame at a time
     """
-    def __init__(self, vid_name, image_dir, mask_dir, size=-1, to_save=None, use_all_mask=False, size_dir=None):
+    def __init__(self, image_dir, mask_dir, size=-1, to_save=None, use_all_mask=False, size_dir=None):
         """
         image_dir - points to a directory of jpg images
         mask_dir - points to a directory of png masks
@@ -25,7 +25,7 @@ class VideoReader(Dataset):
         use_all_mask - when true, read all available mask in mask_dir.
             Default false. Set to true for YouTubeVOS validation.
         """
-        self.vid_name = vid_name
+        # self.vid_name = vid_name
         self.image_dir = image_dir
         self.mask_dir = mask_dir
         self.to_save = to_save
@@ -38,7 +38,6 @@ class VideoReader(Dataset):
         self.frames = sorted(os.listdir(self.image_dir))
         self.palette = Image.open(path.join(mask_dir, sorted(os.listdir(mask_dir))[0])).getpalette()
         self.first_gt_path = path.join(self.mask_dir, sorted(os.listdir(self.mask_dir))[0])
-
         if size < 0:
             self.im_transform = transforms.Compose([
                 transforms.ToTensor(),
@@ -69,11 +68,12 @@ class VideoReader(Dataset):
             size_path = path.join(self.size_dir, frame)
             size_im = Image.open(size_path).convert('RGB')
             shape = np.array(size_im).shape[:2]
-
-        gt_path = path.join(self.mask_dir, frame[:-4]+'.png')
+        gt_path = self.first_gt_path if not self.use_all_mask else path.join(self.mask_dir, frame[:-4] + '.png')
+        # print(gt_path)
         img = self.im_transform(img)
 
         load_mask = self.use_all_mask or (gt_path == self.first_gt_path)
+        load_mask = load_mask and idx == 0
         if load_mask and path.exists(gt_path):
             mask = Image.open(gt_path).convert('P')
             mask = np.array(mask, dtype=np.uint8)
